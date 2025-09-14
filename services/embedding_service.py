@@ -11,7 +11,8 @@ def get_embedding(text: str):
     """
     try:
         embedding = embedding_model.get_embeddings([text])[0].values
+        print("Embedding length:", len(embedding))
         return embedding
     except Exception as e:
-        raise RuntimeError(f"Embedding generation failed: {str(e)}")
-
+        # Use the original exception message, don't reference `embedding` which may not exist
+        raise Exception("Embedding generation failed: " + str(e))
