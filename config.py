@@ -2,7 +2,9 @@
 PROJECT_ID = "reflect-466215"
 REGION = "us-central1"
 EMBEDDING_MODEL = "text-embedding-005"
-VECTOR_DIMENSIONS = 768
-INDEX_ID = "projects/18772936840/locations/us-central1/indexes/2713051538607046656"
-DEPLOYED_INDEX_ID = "projects/18772936840/locations/us-central1/indexEndpoints/1826651652573102080"  # Your Vector Matching Engine index
-APPROX_NEIGHBORS_COUNT = 50
+#Postgres SQL connection
+PG_HOST = "127.0.0.1"       # your DB host/IP
+PG_DB = "reflect_db"           # your database name
+PG_USER = "postgres"       # your DB user
+PG_PASSWORD = "Reflect@123"  # your DB password
+PG_PORT = 5432                 # default PostgreSQL port
