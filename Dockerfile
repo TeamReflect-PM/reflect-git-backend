@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Expose port (Cloud Run expects $PORT)
-EXPOSE 8080
+EXPOSE 8081
 
 # Start with Gunicorn in production
 CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 main:app

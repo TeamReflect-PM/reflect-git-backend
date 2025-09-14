@@ -1,7 +1,7 @@
 import vertexai
 from vertexai.generative_models import GenerativeModel
-#from services.embedding_service import get_embedding
-#from services.vector_service import upsert_embedding
+from services.embedding_service import get_embedding
+from services.vector_service import store_embedding
 import json, uuid
 from google.cloud import firestore
 from datetime import datetime
@@ -80,6 +80,14 @@ For the metadata fields (people, topics, emotions, activities):
             "metadata": result["metadata"],
             "created_at": datetime.utcnow()
         })
+
+        
+        #Embedding and Vector DB
+        embedding = get_embedding(result["summary"])
+        #print("Embedding:", embedding)
+
+        #upsert_embedding(journal_id,user_id, embedding)
+        store_embedding(journal_id,user_id, embedding)
 
         return {"status": "success"}, 200
         

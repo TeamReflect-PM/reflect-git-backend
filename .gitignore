@@ -1,0 +1,12 @@
+# Ignore Python compiled files
+*.pyc
+__pycache__/
+
+# Ignore virtual environment
+.venv/
+env/
+
+# Ignore generated files (replace with your filenames)
+generated_file.txt
+output/
+*.log
