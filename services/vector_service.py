@@ -4,7 +4,7 @@ from psycopg2 import OperationalError, DatabaseError
 import config
 
 def get_conn():
-    """Get PostgreSQL connection with PGVector registered."""
+    print("Get PostgreSQL connection with PGVector registered.")
     try:
         conn = psycopg2.connect(
             host=config.PG_HOST,
