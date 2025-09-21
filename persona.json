@@ -1,0 +1,36 @@
+{
+  "user_id": "testuser-nitya",
+  "persona": {
+    "compulsory_fields": {
+      "preferred_name": "Sarah",
+      "age": 28,
+      "occupation": "Software Engineer",
+      "relationship_status": "in_relationship",
+      "communication_style": "supportive",
+      "preferred_tone": "encouraging",
+      "support_preferences": ["empathy", "practical_advice", "validation"],
+      "current_priorities": ["career_growth", "mental_wellness", "relationship_health"],
+      "biggest_challenge": "managing_work_anxiety_and_imposter_syndrome",
+      "stress_response": "seek_support_and_problem_solve",
+      "personality_type": "thoughtful_and_anxious_optimist",
+      "goal_approach": "process_focused_with_flexibility"
+    },
+    "optional_fields": {
+      "cultural_background": "Chinese_American",
+      "mental_health_openness": 8,
+      "learning_style": "visual_and_hands_on",
+      "decision_making_style": "collaborative_after_research",
+      "conflict_resolution": "address_directly_with_kindness",
+      "energy_pattern": "night_owl_with_morning_struggles",
+      "relaxation_methods": ["nature_walks", "photography", "hot_baths"],
+      "life_satisfaction": 7
+    }
+  },
+  "persona_metadata": {
+    "created_at": "2024-01-15T10:30:00Z",
+    "last_updated": "2024-03-15T16:45:00Z",
+    "completion_percentage": 100,
+    "compulsory_completed": true,
+    "optional_completed": 10
+  }
+}

@@ -20,6 +20,23 @@ def register_routes(app):
             print(f"Internal server error: {str(e)}")
             return jsonify({"status": "error", "message": "Internal server error"}), 500
 
+    # ------------------- Store Persona -------------------
+    @app.route("/store_persona", methods=["POST"])
+    def store_persona_api():
+        try:
+            data = request.get_json()
+            status = store_persona_entry(data)
+            if status[1] == 200:
+                return jsonify({"status": "success", "message": "Persona saved successfully"}), 200
+            else:
+                return jsonify({"status": "error", "message": status[0].get('error')}), status[1]
+
+        except ValueError as ve:
+            return jsonify({"status": "error", "message": str(ve)}), 400
+        except Exception as e:
+            print(f"Internal server error: {str(e)}")
+            return jsonify({"status": "error", "message": "Internal server error"}), 500
+            
     # ------------------- Query Journals -------------------
     # @app.route("/query_journals", methods=["POST"])
     # def query_journals_api():

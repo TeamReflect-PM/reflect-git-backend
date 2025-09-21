@@ -12,6 +12,8 @@
 #--------------------------------------------------------------------
 #command to test - change the port number
 #curl -X POST http://localhost:8081/store_journal -H "Content-Type: application/json" -d @journal.json
+#command to test persona entry
+# curl -X POST http://localhost:8085/store_persona -H "Content-Type: application/json" -d @persona.json
 #--------------------------------------------------------------------
 #if you face gloud authentication errors
 #gcloud config set project reflect-466215
