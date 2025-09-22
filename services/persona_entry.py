@@ -41,3 +41,21 @@ def store_persona_entry(data):
     except Exception as e:
         # Any unexpected exception � raise for API route to handle
         raise RuntimeError(f"Error storing persona: {str(e)}")
+
+def get_persona_by_user_id(user_id):
+    """
+    Retrieves a user's persona from Firestore.
+    Returns the persona data if found, None otherwise.
+    """
+    try:
+        # Get persona document from Firestore
+        persona_ref = db.collection("users").document(user_id).collection("profile").document("persona")
+        persona_doc = persona_ref.get()
+        
+        if persona_doc.exists:
+            return persona_doc.to_dict()
+        else:
+            return None
+            
+    except Exception as e:
+        raise RuntimeError(f"Error retrieving persona: {str(e)}")

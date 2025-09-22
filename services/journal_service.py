@@ -94,3 +94,38 @@ For the metadata fields (people, topics, emotions, activities):
     except Exception as e:
         # Any unexpected exception → raise for API route to handle
         raise RuntimeError(f"Error storing journal: {str(e)}")
+
+def get_journals_summary_by_ids(user_id, journal_ids):
+    """
+    Retrieves summary and metadata for specified journal IDs for a given user.
+    Returns a list of journal data (summary + metadata) for the requested journal IDs.
+    """
+    try:
+        journals_data = []
+        
+        for journal_id in journal_ids:
+            # Get journal document from Firestore
+            journal_ref = db.collection("users").document(user_id).collection("journals").document(journal_id)
+            journal_doc = journal_ref.get()
+            
+            if journal_doc.exists:
+                doc_data = journal_doc.to_dict()
+                # Return only summary and metadata (excluding full journal_text for efficiency)
+                journal_summary = {
+                    "journal_id": journal_id,
+                    "summary": doc_data.get("summary"),
+                    "metadata": doc_data.get("metadata"),
+                    "created_at": doc_data.get("created_at")
+                }
+                journals_data.append(journal_summary)
+            else:
+                # Include info about missing journals
+                journals_data.append({
+                    "journal_id": journal_id,
+                    "error": "Journal not found"
+                })
+        
+        return journals_data
+        
+    except Exception as e:
+        raise RuntimeError(f"Error retrieving journals: {str(e)}")
