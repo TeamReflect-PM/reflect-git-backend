@@ -69,8 +69,11 @@ def register_routes(app):
             if not user_id or not journal_ids:
                 return jsonify({"status": "error", "message": "user_id and journal_ids are required"}), 400
 
-            # Parse journal_ids (comma-separated)
-            journal_id_list = [jid.strip() for jid in journal_ids.split(",")]
+            # Parse journal_ids (comma-separated or single ID)
+            if "," in journal_ids:
+                journal_id_list = [jid.strip() for jid in journal_ids.split(",")]
+            else:
+                journal_id_list = [journal_ids.strip()]
             
             from services.journal_service import get_journals_summary_by_ids
             summary_data = get_journals_summary_by_ids(user_id, journal_id_list)
