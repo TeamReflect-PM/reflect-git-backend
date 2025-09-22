@@ -1,9 +1,14 @@
 from flask import request, jsonify
 from services.journal_service import analyze_store_and_embed_journal
+
 from services.persona_entry import store_persona_entry
-#from services.query_service import handle_query  # assume this is in services/query_service.py
+from services.hybrid_search import hybrid_search
+from services.create_embedding import get_embedding
+from services.metadata_extraction import extract_metadata
+
 
 def register_routes(app):
+
     # ------------------- Store Journal -------------------
     @app.route("/store_journal", methods=["POST"])
     def store_journal_api():
@@ -84,23 +89,37 @@ def register_routes(app):
             print(f"Internal server error: {str(e)}")
             return jsonify({"status": "error", "message": "Internal server error"}), 500
             
-    # ------------------- Query Journals -------------------
-    # @app.route("/query_journals", methods=["POST"])
-    # def query_journals_api():
-    #     try:
-    #         data = request.get_json()
-    #         user_id = data.get("user_id")
-    #         query_text = data.get("query")
-    #         top_k = data.get("top_k", 5)
+    # ------------------- Hybrid Search -------------------
+    @app.route("/search_journal", methods=["POST"])
+    def search_journal_api():
+        try:
+            data = request.get_json()
+            user_id = data.get("user_id")
+            query = data.get("query")
+            top_k = data.get("top_k", 5)
 
-    #         if not user_id or not query_text:
-    #             return jsonify({"status": "error", "message": "user_id and query are required"}), 400
+            if not user_id or not query:
+                return jsonify({"status": "error", "message": "user_id and query are required"}), 400
 
-    #         result, status = handle_query(user_id, query_text, top_k)
-    #         return jsonify(result), status
+            # Step 1: Convert query to embedding
+            query_embedding = get_embedding(query)
 
-    #     except ValueError as ve:
-    #         return jsonify({"status": "error", "message": str(ve)}), 400
-    #     except Exception as e:
-    #         print(f"Internal server error: {str(e)}")
-    #         return jsonify({"status": "error", "message": "Internal server error"}), 500
+            # Step 2: Extract metadata from query
+            metadata_filters = extract_metadata(query)
+
+            # Step 3: Hybrid search
+            results = hybrid_search(
+                user_id=user_id,
+                query_embedding=query_embedding,
+                metadata_filters=metadata_filters,
+                top_k=top_k
+            )
+
+            return jsonify({
+                "status": "success",
+                "results": results
+            }), 200
+
+        except Exception as e:
+            print(f"Internal server error: {str(e)}")
+            return jsonify({"status": "error", "message": "Internal server error"}), 500
