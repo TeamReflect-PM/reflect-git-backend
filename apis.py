@@ -1,14 +1,15 @@
 from flask import request, jsonify
-from services import prompt_service, context_service, journal_service, conversation_service
+from services import prompt_service, journal_service, conversation_service, persona_entry, utils
 
 
-#from services.query_service import handle_query  # assume this is in services/query_service.py
 from services.journal_service import analyze_store_and_embed_journal
 
-from services.persona_entry import store_persona_entry
+from services.persona_entry import store_persona_entry,get_persona_by_user_id
 from services.hybrid_search import hybrid_search
 from services.create_embedding import get_embedding
 from services.metadata_extraction import extract_metadata
+from datetime import datetime
+
 
 
 def register_routes(app):
@@ -40,47 +41,37 @@ def register_routes(app):
 
             user_id = data.get("user_id")
             query = data.get("query")
+            top_k = data.get("top_k", 5)
 
             if not user_id or not query:
                 return jsonify({"status": "error", "message": "user_id and query are required"}), 400
 
             # --- Fetch user context (persona + journal summaries) ---
-            #persona, journal_summaries = context_service.get_user_context(user_id, query)
             conversation_summaries = conversation_service.get_latest_n_summaries(user_id, n=3)
 
-            # ---- Static test data ----
-            persona = {
-                "name": "Nitya",
-                "traits": ["introverted", "reflective", "curious"],
-                "goals": ["manage stress", "improve confidence", "balance work and life"]
-            }
+            print("DEBUG: fetched conversation summaries: ", conversation_summaries)
 
-            journal_summaries = [
-                {
-                    "journal_id": "jid123",
-                    "summary": "Had a stressful meeting with manager, felt anxious about deadlines.",
-                    "metadata": {
-                        "date": "2025-09-10",
-                        "mood": "anxious",
-                        "people": ["manager"],
-                        "topics": ["work", "deadlines"],
-                        "emotions": ["anxiety", "stress"],
-                        "activities": ["meeting"],
-                        "stress_level": "high"
-                    }
-                },
-                {
-                    "journal_id": "jid124",
-                    "summary": "Went for a long walk, felt more calm afterwards.",
-                    "metadata": {
-                        "date": "2025-09-11",
-                        "mood": "calm",
-                        "activities": ["walking"],
-                        "emotions": ["relief", "peace"],
-                        "stress_level": "low"
-                    }
-                }
-            ]
+            persona = get_persona_by_user_id(user_id)
+
+
+
+            # Step 1: Convert query to embedding
+            query_embedding = get_embedding(query)
+
+            # Step 2: Extract metadata from query
+            metadata_filters = extract_metadata(query)
+
+            # Step 3: Hybrid search
+            journal_ids = hybrid_search(
+                user_id=user_id,
+                query_embedding=query_embedding,
+                metadata_filters=metadata_filters,
+                top_k=top_k
+            )
+
+            journal_summaries = journal_service.fetch_summaries_and_metadata(user_id, journal_ids)
+
+            print("DEBUG: journal summaries: ", journal_summaries)
 
             # --- Construct prompt ---
             prompt = prompt_service.construct_prompt(query, persona, journal_summaries, conversation_summaries)

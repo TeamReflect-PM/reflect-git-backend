@@ -3,10 +3,11 @@ from datetime import datetime
 import json
 from google.cloud import firestore
 from vertexai.generative_models import GenerativeModel
-from services.embedding_service import get_embedding
-from services.vector_service import store_embedding
+from services.create_embedding import get_embedding
+from services.embedding_store import store_embedding
 from google.protobuf.timestamp_pb2 import Timestamp
 from config import PROJECT_ID, REGION
+from services import utils
 
 # Initialize Firestore + VertexAI
 db = firestore.Client(project=PROJECT_ID)
@@ -85,26 +86,11 @@ def get_latest_n_summaries(user_id: str, n: int = 3):
     result = []
     for doc in summaries_ref:
         data = doc.to_dict()
-        serializable_data = make_serializable(data)  # convert all timestamps recursively
+        
         result.append({
-            "summary_text": serializable_data.get("summary_text"),
-            "metadata": serializable_data.get("metadata")
+            "summary_text": data.get("summary_text"),
+            "metadata": data.get("metadata")
         })
 
-    return result
+    return utils.make_serializable(result)
 
-def make_serializable(obj):
-    """
-    Recursively converts Firestore timestamps (DatetimeWithNanoseconds) into ISO strings
-    so that json.dumps can serialize the object.
-    """
-    if isinstance(obj, dict):
-        return {k: make_serializable(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [make_serializable(i) for i in obj]
-    elif hasattr(obj, "ToDatetime"):  # Firestore timestamp object
-        return obj.ToDatetime().isoformat()
-    elif isinstance(obj, datetime):
-        return obj.isoformat()
-    else:
-        return obj

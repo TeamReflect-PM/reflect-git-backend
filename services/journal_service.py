@@ -5,6 +5,7 @@ from services.embedding_store import store_embedding
 import json, uuid
 from google.cloud import firestore
 from datetime import datetime
+from services import utils
 from config import PROJECT_ID, REGION  # Config file for project settings
 
 # Initialize VertexAI + Firestore
@@ -133,7 +134,7 @@ def fetch_summaries_and_metadata(user_id: str, journal_ids: list[str]) -> list[d
                     "error": "Journal not found"
                 })
 
-        return results
+        return utils.make_serializable(results)
 
     except Exception as e:
         print(f"Error fetching summaries/metadata for user {user_id}: {str(e)}")
@@ -173,3 +174,17 @@ def get_journals_summary_by_ids(user_id, journal_ids):
         
     except Exception as e:
         raise RuntimeError(f"Error retrieving journals: {str(e)}")
+
+def make_serializable(obj):
+    """
+    Recursively converts Firestore timestamps (DatetimeWithNanoseconds) into ISO strings
+    so that json.dumps can serialize the object.
+    """
+    if isinstance(obj, dict):
+        return {k: make_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [make_serializable(i) for i in obj]
+    elif hasattr(obj, "isoformat"):  # Handles datetime and Firestore timestamp
+        return obj.isoformat()
+    else:
+        return obj

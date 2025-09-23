@@ -40,6 +40,8 @@
 # -----------------------------
 # curl -X POST http://localhost:9090/search_journal -H "Content-Type: application/json" -d @search_payload.json
 
+# curl -X POST http://localhost:9090/therapist -H "Content-Type: application/json" -d @therapist_payload.json
+
 # -----------------------------
 # 🔑 Authentication Fix (if errors)
 # -----------------------------
