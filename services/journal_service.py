@@ -90,9 +90,7 @@ For the metadata fields (people, topics, emotions, activities):
         except Exception as e:
                 raise RuntimeError(f"Embedding generation failed: {e}")
 
-        #upsert_embedding(journal_id,user_id, embedding)
-        store_embedding(journal_id,user_id, embedding, "journal_embeddings")
-        store_embedding(journal_id,user_id, embedding)
+        store_embedding(user_id, journal_id, embedding, "journal_embeddings")
 
         return {"status": "success"}, 200
         
@@ -174,17 +172,3 @@ def get_journals_summary_by_ids(user_id, journal_ids):
         
     except Exception as e:
         raise RuntimeError(f"Error retrieving journals: {str(e)}")
-
-def make_serializable(obj):
-    """
-    Recursively converts Firestore timestamps (DatetimeWithNanoseconds) into ISO strings
-    so that json.dumps can serialize the object.
-    """
-    if isinstance(obj, dict):
-        return {k: make_serializable(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [make_serializable(i) for i in obj]
-    elif hasattr(obj, "isoformat"):  # Handles datetime and Firestore timestamp
-        return obj.isoformat()
-    else:
-        return obj
