@@ -1,6 +1,7 @@
 import json
 from google.cloud import firestore
 from datetime import datetime
+from services import utils
 from config import PROJECT_ID  # Config file for project settings
 
 # Initialize Firestore
@@ -53,7 +54,7 @@ def get_persona_by_user_id(user_id):
         persona_doc = persona_ref.get()
         
         if persona_doc.exists:
-            return persona_doc.to_dict()
+            return utils.make_serializable(persona_doc.to_dict())
         else:
             return None
             
