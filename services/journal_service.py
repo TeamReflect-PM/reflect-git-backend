@@ -1,7 +1,7 @@
 import vertexai
 from vertexai.generative_models import GenerativeModel
-from services.embedding_service import get_embedding
-from services.vector_service import store_embedding
+from services.create_embedding import get_embedding
+from services.embedding_store import store_embedding
 import json, uuid
 from google.cloud import firestore
 from datetime import datetime
@@ -46,12 +46,11 @@ TASK:
     "summary": "the concise summary",
     "metadata": {{
         "date": "YYYY-MM-DD if mentioned, else null",
-        "mood": "overall emotional tone",
-        "people": ["max 3 most important people"],
-        "topics": ["max 3 main themes"],
-        "emotions": ["max 3 main emotions"],
-        "activities": ["max 3 main activities"],
-        "stress_level": "low, medium, or high"
+        "mood": "overall emotional tone (happy, sad, anxious, calm, etc.)",
+        "people": ["max 3 important names"],
+        "tags": ["topics, themes, or activities"],
+        "emotions": ["max 3 specific emotions"],
+        "stress_level": "low, medium, high"
     }}
 }}
 
@@ -83,10 +82,13 @@ For the metadata fields (people, topics, emotions, activities):
 
         
         #Embedding and Vector DB
-        embedding = get_embedding(result["summary"])
-        #print("Embedding:", embedding)
+        try:
+            embedding = get_embedding(result["summary"])
+            if not isinstance(embedding, list) or not all(isinstance(x, float) for x in embedding):
+                raise ValueError(f"Invalid embedding returned: {embedding}")
+        except Exception as e:
+                raise RuntimeError(f"Embedding generation failed: {e}")
 
-        #upsert_embedding(journal_id,user_id, embedding)
         store_embedding(journal_id,user_id, embedding)
 
         return {"status": "success"}, 200
