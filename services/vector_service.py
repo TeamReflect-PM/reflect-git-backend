@@ -24,24 +24,33 @@ finally:
     if conn:
         conn_pool.putconn(conn)
 
-def store_embedding(journal_id: str, user_id: str, embedding: list):
+def store_embedding(user_id: str, summary_id: str, embedding: list, table: str = "journal_embeddings"):
     """
-    Store a single journal embedding in PostgreSQL using connection pool.
+    Store a single embedding (journal or conversation) in PostgreSQL using connection pool.
+    
+    Parameters:
+    - user_id: str
+    - summary_id: str (journal_id or conversation summary_id)
+    - embedding: list of floats
+    - table: str - table name ('journal_embeddings' or 'conversation_embeddings')
     """
     if not embedding or not isinstance(embedding, list):
         raise ValueError("Embedding must be a non-empty list of floats")
+    
+    # Determine column name based on table
+    column_id = "journal_id" if table == "journal_embeddings" else "summary_id"
 
-    insert_query = """
-        INSERT INTO journal_embeddings (journal_id, user_id, embedding)
+    insert_query = f"""
+        INSERT INTO {table} ({column_id}, user_id, embedding)
         VALUES (%s, %s, %s)
     """
-
+    
     conn = None
     try:
         # Get a connection from the pool
         conn = conn_pool.getconn()
         with conn.cursor() as cur:
-            cur.execute(insert_query, (journal_id, user_id, embedding))
+            cur.execute(insert_query, (summary_id, user_id, embedding))
             conn.commit()
     except (OperationalError, DatabaseError) as e:
         # Rollback in case of DB error

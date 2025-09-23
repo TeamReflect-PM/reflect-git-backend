@@ -85,3 +85,13 @@ gcloud projects add-iam-policy-binding reflect-466215 \
 #gcloud run services update reflect-backend \
   --region=us-central1 \
   --set-secrets=PG_PASSWORD=pg-password:latest
+
+# Conversation embeddings table
+CREATE TABLE conversation_embeddings (
+    id SERIAL PRIMARY KEY,
+    summary_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    embedding vector(768),  -- matches text-embedding-005 model
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(summary_id)
+);
