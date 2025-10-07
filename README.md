@@ -40,6 +40,8 @@
 # -----------------------------
 # curl -X POST http://localhost:9090/search_journal -H "Content-Type: application/json" -d @search_payload.json
 
+# curl -X POST http://localhost:9090/therapist -H "Content-Type: application/json" -d @therapist_payload.json
+
 # -----------------------------
 # 🔑 Authentication Fix (if errors)
 # -----------------------------
@@ -136,3 +138,14 @@
 # gcloud run services update reflect-backend \
 #   --region=us-central1 \
 #   --set-secrets=PG_PASSWORD=pg-password:latest
+
+
+# Conversation embeddings table
+CREATE TABLE conversation_embeddings (
+    id SERIAL PRIMARY KEY,
+    summary_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    embedding vector(768),  -- matches text-embedding-005 model
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(summary_id)
+);

@@ -1,10 +1,15 @@
 from flask import request, jsonify
+from services import prompt_service, journal_service, conversation_service, persona_entry, utils
+
+
 from services.journal_service import analyze_store_and_embed_journal
 
-from services.persona_entry import store_persona_entry
+from services.persona_entry import store_persona_entry,get_persona_by_user_id
 from services.hybrid_search import hybrid_search
 from services.create_embedding import get_embedding
 from services.metadata_extraction import extract_metadata
+from datetime import datetime
+
 
 
 def register_routes(app):
@@ -26,6 +31,78 @@ def register_routes(app):
             print(f"Internal server error: {str(e)}")
             return jsonify({"status": "error", "message": "Internal server error"}), 500
 
+
+    # ------------------- Therapist Chat -------------------
+    @app.route("/therapist", methods=["POST"])
+    def therapist_api():
+        try:
+            data = request.get_json()
+            print("DEBUG: Incoming JSON:", data)  # 👈 Add debug
+
+            user_id = data.get("user_id")
+            query = data.get("query")
+            top_k = data.get("top_k", 5)
+
+            if not user_id or not query:
+                return jsonify({"status": "error", "message": "user_id and query are required"}), 400
+
+            # --- Fetch user context (persona + journal summaries) ---
+            conversation_summaries = conversation_service.get_latest_n_summaries(user_id, n=3)
+
+            print("DEBUG: fetched conversation summaries: ", conversation_summaries)
+
+            persona = get_persona_by_user_id(user_id)
+
+
+
+            # Step 1: Convert query to embedding
+            query_embedding = get_embedding(query)
+
+            # Step 2: Extract metadata from query
+            metadata_filters = extract_metadata(query)
+
+            # Step 3: Hybrid search
+            journal_ids = hybrid_search(
+                user_id=user_id,
+                query_embedding=query_embedding,
+                metadata_filters=metadata_filters,
+                top_k=top_k
+            )
+
+            journal_summaries = journal_service.fetch_summaries_and_metadata(user_id, journal_ids)
+
+            print("DEBUG: journal summaries: ", journal_summaries)
+
+            # --- Construct prompt ---
+            prompt = prompt_service.construct_prompt(query, persona, journal_summaries, conversation_summaries)
+
+            print("prompt provided to gemini: ",prompt)
+
+
+            # --- Call Gemini 2.5 Flash ---
+            answer = prompt_service.call_gemini(prompt)
+
+            #summarize and store the response
+            summary_id = conversation_service.summarize_and_store_conversation(user_id, query, answer)
+
+            return jsonify({
+                "status": "success",
+                "response": answer,
+                "prompt_used": prompt
+            }), 200
+
+        except Exception as e:
+            print(f"Internal server error: {str(e)}")
+            return jsonify({"status": "error", "message": "Internal server error"}), 500
+
+    # ------------------- Query Journals -------------------
+    # @app.route("/query_journals", methods=["POST"])
+    # def query_journals_api():
+    #     try:
+    #         data = request.get_json()
+    #         user_id = data.get("user_id")
+    #         query_text = data.get("query")
+    #         top_k = data.get("top_k", 5)
     # ------------------- Store Persona -------------------
     @app.route("/store_persona", methods=["POST"])
     def store_persona_api():

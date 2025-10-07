@@ -5,6 +5,7 @@ from services.embedding_store import store_embedding
 import json, uuid
 from google.cloud import firestore
 from datetime import datetime
+from services import utils
 from config import PROJECT_ID, REGION  # Config file for project settings
 
 # Initialize VertexAI + Firestore
@@ -89,13 +90,53 @@ For the metadata fields (people, topics, emotions, activities):
         except Exception as e:
                 raise RuntimeError(f"Embedding generation failed: {e}")
 
-        store_embedding(journal_id,user_id, embedding)
+        store_embedding(user_id, journal_id, embedding, "journal_embeddings")
 
         return {"status": "success"}, 200
         
     except Exception as e:
         # Any unexpected exception → raise for API route to handle
         raise RuntimeError(f"Error storing journal: {str(e)}")
+
+
+def fetch_summaries_and_metadata(user_id: str, journal_ids: list[str]) -> list[dict]:
+    """
+    Fetch summaries + metadata for a given user_id and list of journal_ids.
+
+    Args:
+        user_id (str): The ID of the user.
+        journal_ids (list[str]): List of journal IDs to fetch.
+
+    Returns:
+        list[dict]: A list of dictionaries with journal_id, summary, and metadata.
+    """
+    if not user_id or not journal_ids:
+        raise ValueError("Both user_id and journal_ids are required")
+
+    try:
+        results = []
+        journals_ref = db.collection("users").document(user_id).collection("journals")
+
+        for jid in journal_ids:
+            doc = journals_ref.document(jid).get()
+            if doc.exists:
+                data = doc.to_dict()
+                results.append({
+                    "journal_id": jid,
+                    "summary": data.get("summary"),
+                    "metadata": data.get("metadata")
+                })
+            else:
+                results.append({
+                    "journal_id": jid,
+                    "error": "Journal not found"
+                })
+
+        return utils.make_serializable(results)
+
+    except Exception as e:
+        print(f"Error fetching summaries/metadata for user {user_id}: {str(e)}")
+        raise RuntimeError("Failed to fetch summaries and metadata") from e
 
 def get_journals_summary_by_ids(user_id, journal_ids):
     """
