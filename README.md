@@ -21,6 +21,45 @@
 # Therapeutic session summaries that capture key insights, emotional progress, coping strategies discussed, and follow-up needs. These summaries maintain continuity between conversations, allowing the AI to reference past breakthroughs and track long-term therapeutic progress for each user.
 
 
+# This is a Reflect AI Mental Health & Journaling Backend - a Flask API that creates an AI therapist chatbot using Google Gemini.
+
+#  Main Files:
+
+#  main.py - Flask app bootstrapper (runs server on port 5000)
+
+#  apis.py - 14 API endpoints for journals, therapist chat, persona, mood tracking, user profiles
+
+#  config.py - GCP project settings, database credentials, embedding model config
+
+#  Services Directory:
+
+#  AI/LLM:
+#  - prompt_service.py - Builds prompts for Gemini with persona + conversation history
+#  - create_embedding.py - Generates embeddings using text-embedding-005
+#  - metadata_extraction.py - Extracts dates/moods/topics from queries
+
+#  Data Storage:
+#  - journal_service.py - Analyzes journals, generates summaries, stores in Firestore + embeddings
+#  - conversation_service.py - Summarizes AI chat turns, stores summaries + embeddings
+#  - persona_entry.py - Stores user persona/profile in Firestore
+#  - mood_service.py - Mood entry storage with emoji support + analytics
+#  - user_service.py - Cross-project bridge: converts email (Project 1 auth) → user ID (Project 2 storage)
+
+#  Search/Database:
+#  - hybrid_search.py - Vector search (PostgreSQL) + metadata filtering (Firestore)
+#  - vector_search.py - Pure vector similarity search
+#  - embedding_store.py - Stores embeddings in PostgreSQL
+#  - db_connection.py - PostgreSQL connection pooling
+
+ # Tech Stack:
+
+ # Flask, Google Gemini 2.5 Flash, Firestore (metadata), PostgreSQL + pgvector (embeddings), Vertex AI
+
+ # Architecture:
+
+#  Bridges two GCP projects using email as the key - authenticates in Project 1, stores data in Project 2. Uses dual database: Firestore for metadata, PostgreSQL
+#  for vector search.
+
 # -----------------------------
 # 🐍 Virtual Environment Setup
 # -----------------------------
