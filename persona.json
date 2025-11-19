@@ -4,6 +4,7 @@
     "compulsory_fields": {
       "preferred_name": "Sarah",
       "age": 28,
+      "gender":"female",
       "occupation": "Software Engineer",
       "relationship_status": "in_relationship",
       "communication_style": "supportive",

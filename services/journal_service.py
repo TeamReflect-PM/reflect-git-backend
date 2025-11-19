@@ -2,6 +2,7 @@ import vertexai
 from vertexai.generative_models import GenerativeModel
 from services.create_embedding import get_embedding
 from services.embedding_store import store_embedding
+from services.user_service import get_or_create_user, increment_user_stats
 import json, uuid
 from google.cloud import firestore
 from datetime import datetime
@@ -17,15 +18,22 @@ db = firestore.Client(project=PROJECT_ID)
 def analyze_store_and_embed_journal(data):
     """
     Stores a user's journal entry along with summary and metadata in Firestore.
+    Bridges Project 1 (auth) with Project 2 (storage).
     Raises exceptions on server errors.
     Returns True if success.
     """
     # Client-side validation
     journal_text = data.get("journal_text")
-    user_id = data.get("user_id")
+    user_email = data.get("user_id")  # This is actually the email from Project 1
 
-    if not journal_text or not user_id:
-        raise ValueError("user_id and journal_text are required")
+    if not journal_text or not user_email:
+        raise ValueError("user_id (email) and journal_text are required")
+
+    # BRIDGE: Get or create user in Project 2
+    user_data = get_or_create_user(user_email)
+    internal_user_id = user_data['user_id']  # Project 2 user ID
+    
+    print(f"DEBUG: Journal storage - Email: {user_email} -> Internal ID: {internal_user_id}")
 
     try:
         # ---------------- PROMPT ----------------
@@ -73,11 +81,12 @@ For the metadata fields (people, topics, emotions, activities):
         # Generate journal ID
         journal_id = str(uuid.uuid4())
 
-        # Save to Firestore under users/{userId}/journals/{journalId}
-        db.collection("users").document(user_id).collection("journals").document(journal_id).set({
+        # Save to Firestore under users/{internalUserId}/journals/{journalId}
+        db.collection("users").document(internal_user_id).collection("journals").document(journal_id).set({
             "journal_text": journal_text,
             "summary": result["summary"],
             "metadata": result["metadata"],
+            "user_email": user_email,  # Store original email for reference
             "created_at": datetime.utcnow()
         })
 
@@ -90,7 +99,11 @@ For the metadata fields (people, topics, emotions, activities):
         except Exception as e:
                 raise RuntimeError(f"Embedding generation failed: {e}")
 
-        store_embedding(user_id, journal_id, embedding, "journal_embeddings")
+        # Store embedding with email as user_id for consistency with existing vector search
+        store_embedding(user_email, journal_id, embedding, "journal_embeddings")
+        
+        # Update user statistics
+        increment_user_stats(user_email, 'journal')
 
         return {"status": "success"}, 200
         
@@ -99,23 +112,28 @@ For the metadata fields (people, topics, emotions, activities):
         raise RuntimeError(f"Error storing journal: {str(e)}")
 
 
-def fetch_summaries_and_metadata(user_id: str, journal_ids: list[str]) -> list[dict]:
+def fetch_summaries_and_metadata(user_email: str, journal_ids: list[str]) -> list[dict]:
     """
-    Fetch summaries + metadata for a given user_id and list of journal_ids.
+    Fetch summaries + metadata for a given user email and list of journal_ids.
+    Bridges Project 1 (email) with Project 2 (internal user ID).
 
     Args:
-        user_id (str): The ID of the user.
+        user_email (str): The email of the user from Project 1.
         journal_ids (list[str]): List of journal IDs to fetch.
 
     Returns:
         list[dict]: A list of dictionaries with journal_id, summary, and metadata.
     """
-    if not user_id or not journal_ids:
-        raise ValueError("Both user_id and journal_ids are required")
+    if not user_email or not journal_ids:
+        raise ValueError("Both user_email and journal_ids are required")
 
     try:
+        # BRIDGE: Get internal user ID from email
+        user_data = get_or_create_user(user_email)
+        internal_user_id = user_data['user_id']
+        
         results = []
-        journals_ref = db.collection("users").document(user_id).collection("journals")
+        journals_ref = db.collection("users").document(internal_user_id).collection("journals")
 
         for jid in journal_ids:
             doc = journals_ref.document(jid).get()
@@ -135,20 +153,25 @@ def fetch_summaries_and_metadata(user_id: str, journal_ids: list[str]) -> list[d
         return utils.make_serializable(results)
 
     except Exception as e:
-        print(f"Error fetching summaries/metadata for user {user_id}: {str(e)}")
+        print(f"Error fetching summaries/metadata for user {user_email}: {str(e)}")
         raise RuntimeError("Failed to fetch summaries and metadata") from e
 
-def get_journals_summary_by_ids(user_id, journal_ids):
+def get_journals_summary_by_ids(user_email, journal_ids):
     """
     Retrieves summary and metadata for specified journal IDs for a given user.
+    Bridges Project 1 (email) with Project 2 (internal user ID).
     Returns a list of journal data (summary + metadata) for the requested journal IDs.
     """
     try:
+        # BRIDGE: Get internal user ID from email
+        user_data = get_or_create_user(user_email)
+        internal_user_id = user_data['user_id']
+        
         journals_data = []
         
         for journal_id in journal_ids:
-            # Get journal document from Firestore
-            journal_ref = db.collection("users").document(user_id).collection("journals").document(journal_id)
+            # Get journal document from Firestore using internal user ID
+            journal_ref = db.collection("users").document(internal_user_id).collection("journals").document(journal_id)
             journal_doc = journal_ref.get()
             
             if journal_doc.exists:
@@ -169,6 +192,39 @@ def get_journals_summary_by_ids(user_id, journal_ids):
                 })
         
         return journals_data
-        
+
     except Exception as e:
         raise RuntimeError(f"Error retrieving journals: {str(e)}")
+
+def get_all_journals_by_user(user_email, limit=50):
+    """
+    Retrieves all journals for a given user email.
+    Bridges Project 1 (email) with Project 2 (internal user ID).
+    Returns a list of journal entries with summaries and metadata.
+    """
+    try:
+        # BRIDGE: Get internal user ID from email
+        user_data = get_or_create_user(user_email)
+        internal_user_id = user_data['user_id']
+
+        # Get all journals for this user, ordered by creation date (newest first)
+        journals_ref = db.collection("users").document(internal_user_id).collection("journals")
+        journals_query = journals_ref.order_by("created_at", direction=firestore.Query.DESCENDING).limit(limit)
+        journals_docs = journals_query.stream()
+
+        journals_data = []
+        for doc in journals_docs:
+            doc_data = doc.to_dict()
+            journal_entry = {
+                "journal_id": doc.id,
+                "journal_text": doc_data.get("journal_text"),
+                "summary": doc_data.get("summary"),
+                "metadata": doc_data.get("metadata"),
+                "created_at": doc_data.get("created_at")
+            }
+            journals_data.append(journal_entry)
+
+        return utils.make_serializable(journals_data)
+
+    except Exception as e:
+        raise RuntimeError(f"Error retrieving all journals for user {user_email}: {str(e)}")
